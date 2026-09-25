@@ -126,6 +126,15 @@ h2, h3, strong, .selection-name, .tv-title { overflow-wrap: anywhere; }
 .ledger-copy { min-width: 0; display: grid; gap: 2px; }
 .ledger-copy span, .ledger-copy small { color: var(--muted); font-size: .72rem; line-height: 1.35; }
 .ledger-amount { flex: 0 0 auto; color: var(--red); font-variant-numeric: tabular-nums; }
+.person-tab { overflow: hidden; background: rgba(255,255,255,.72); border: 1px solid var(--line); border-radius: 15px; box-shadow: 0 5px 14px rgba(39,89,105,.07); }
+.person-tab-summary { display: grid; grid-template-columns: minmax(0, 1fr) auto 28px; align-items: center; gap: 12px; width: 100%; padding: 14px; color: var(--ink); background: transparent; border: 0; text-align: left; }
+.person-tab-summary:hover { background: rgba(46,175,202,.08); }
+.person-tab-name { min-width: 0; overflow-wrap: anywhere; font-size: .94rem; font-weight: 900; }
+.person-tab-total { color: var(--red); font-size: .9rem; font-weight: 900; font-variant-numeric: tabular-nums; }
+.person-tab-chevron { display: inline-grid; place-items: center; width: 26px; height: 26px; color: #fff; background: var(--cyan); border-radius: 50%; font-weight: 900; }
+.person-tab-details { display: grid; gap: 7px; padding: 0 12px 12px; border-top: 1px solid #dcebee; }
+.person-tab-line { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 2px; border-bottom: 1px solid #e2edf0; }
+.person-serve-all { width: 100%; margin-top: 3px; }
 .tab-total { display: grid; margin-bottom: 12px; padding: 12px; background: linear-gradient(135deg, rgba(255,75,62,.15), transparent); border: 1px solid rgba(255,75,62,.3); border-radius: 9px; }
 .tab-total strong { color: var(--red); font-size: 1.35rem; }
 .tab-total span { color: var(--muted); font-size: .7rem; text-transform: uppercase; letter-spacing: .07em; }

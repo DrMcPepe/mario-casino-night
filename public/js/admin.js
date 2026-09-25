@@ -1,5 +1,6 @@
 const socket = io();
 let state = null;
+const expandedTabs = new Set();
 const $ = (selector) => document.querySelector(selector);
 const esc = (value) => String(value ?? "").replace(/[&<>'"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character]);
 
@@ -105,9 +106,25 @@ function render() {
   const tabShots = state.barGroups.filter((group) => group.unit === "shot").reduce((sum, group) => sum + group.amount, 0);
   const tabSips = state.barGroups.filter((group) => group.unit === "sips").reduce((sum, group) => sum + group.amount, 0);
   $("#admin-tab-total").textContent = `${tabSeconds}s${tabShots ? ` + ${tabShots} shot${tabShots === 1 ? "" : "s"}` : ""}${tabSips ? ` + ${tabSips} sips` : ""} currently owed`;
-  $("#admin-ledger").innerHTML = state.barGroups.length ? state.barGroups.map((group) => {
-    const copy = groupCopy(group);
-    return `<div class="ledger-item"><div class="ledger-copy"><strong>${esc(group.playerName)}</strong><span>${esc(copy.title)} • ${esc(copy.detail)}</span>${group.count > 1 ? `<small>${group.count} entries combined</small>` : ""}</div><div class="row"><strong class="ledger-amount">${group.amount} ${esc(group.unit)}</strong><button class="button green small" data-serve-group="${group.entryIds.join(",")}">Served</button></div></div>`;
+  const personTabs = new Map();
+  for (const group of state.barGroups) {
+    if (!personTabs.has(group.playerId)) personTabs.set(group.playerId, { playerId: group.playerId, playerName: group.playerName, seconds: 0, shots: 0, sips: 0, entryIds: [], groups: [] });
+    const tab = personTabs.get(group.playerId);
+    if (group.unit === "seconds") tab.seconds += group.amount;
+    if (group.unit === "shot") tab.shots += group.amount;
+    if (group.unit === "sips") tab.sips += group.amount;
+    tab.entryIds.push(...group.entryIds);
+    tab.groups.push(group);
+  }
+  const tabs = [...personTabs.values()].sort((a, b) => b.seconds - a.seconds || b.shots - a.shots || b.sips - a.sips || a.playerName.localeCompare(b.playerName));
+  $("#admin-ledger").innerHTML = tabs.length ? tabs.map((tab) => {
+    const expanded = expandedTabs.has(tab.playerId);
+    const total = [`${tab.seconds}s`, tab.shots ? `${tab.shots} shot${tab.shots === 1 ? "" : "s"}` : "", tab.sips ? `${tab.sips} sips` : ""].filter(Boolean).join(" + ");
+    const details = tab.groups.map((group) => {
+      const copy = groupCopy(group);
+      return `<div class="person-tab-line"><div class="ledger-copy"><strong>${esc(copy.title)}</strong><span>${esc(copy.detail)}</span>${group.count > 1 ? `<small>${group.count} entries combined</small>` : ""}</div><div class="row"><strong class="ledger-amount">${group.amount} ${esc(group.unit)}</strong><button class="button green small" data-serve-group="${group.entryIds.join(",")}">Serve</button></div></div>`;
+    }).join("");
+    return `<article class="person-tab"><button class="person-tab-summary" data-toggle-tab="${tab.playerId}" aria-expanded="${expanded}"><span class="person-tab-name">${esc(tab.playerName)}</span><span class="person-tab-total">${esc(total)}</span><span class="person-tab-chevron" aria-hidden="true">${expanded ? "−" : "+"}</span></button><div class="person-tab-details ${expanded ? "" : "hidden"}">${details}<button class="button green person-serve-all" data-serve-person="${tab.entryIds.join(",")}">Serve all for ${esc(tab.playerName)}</button></div></article>`;
   }).join("") : `<div class="empty-state"><strong>No unpaid drinks</strong><span>The service queue is clear.</span></div>`;
 
   const standings = [...state.statistics].sort((a, b) => b.matches.wins - a.matches.wins || a.matches.losses - b.matches.losses || b.betting.netSeconds - a.betting.netSeconds);
@@ -141,10 +158,22 @@ document.addEventListener("click", async (event) => {
   const release = event.target.closest("[data-release]");
   const open = event.target.closest("[data-open]");
   const serve = event.target.closest("[data-serve-group]");
+  const servePerson = event.target.closest("[data-serve-person]");
+  const toggleTab = event.target.closest("[data-toggle-tab]");
   try {
     if (release && confirm("Release this phone profile?")) await send("admin:player.release", { playerId: release.dataset.release });
     if (open) await send("admin:betting.open", { durationSeconds: Number(open.dataset.open) });
     if (serve) await send("admin:bar.serve", { entryIds: serve.dataset.serveGroup.split(",") });
+    if (servePerson) await send("admin:bar.serve", { entryIds: servePerson.dataset.servePerson.split(",") });
+    if (toggleTab) {
+      const playerId = toggleTab.dataset.toggleTab;
+      const details = toggleTab.closest(".person-tab").querySelector(".person-tab-details");
+      const expanded = !details.classList.contains("hidden");
+      details.classList.toggle("hidden", expanded);
+      toggleTab.setAttribute("aria-expanded", String(!expanded));
+      toggleTab.querySelector(".person-tab-chevron").textContent = expanded ? "+" : "−";
+      if (expanded) expandedTabs.delete(playerId); else expandedTabs.add(playerId);
+    }
   } catch (error) { toast(error.message, true); }
 });
 
