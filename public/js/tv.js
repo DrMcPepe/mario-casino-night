@@ -60,9 +60,11 @@ function render(previous = null) {
   }
   $("#tv-title").textContent = match?.title || (state.players.length ? "Next match loading" : "Scan. Join. Bet.");
   $("#tv-sport").textContent = match ? match.sport : `${state.players.length}/13 drivers checked in`;
-  $("#tv-status").textContent = statusText(match?.status);
-  $("#tv-status").className = `status ${match?.status === "betting_open" ? "open" : match?.status === "live" ? "live" : ""}`;
-  $("#tv-pot").textContent = `Pot ${state.totalPot}s`;
+  for (const selector of ["#tv-status", "#tv-inline-status"]) {
+    $(selector).textContent = statusText(match?.status);
+    $(selector).className = `status ${match?.status === "betting_open" ? "open" : match?.status === "live" ? "live" : ""}`;
+  }
+  for (const selector of ["#tv-pot", "#tv-inline-pot"]) $(selector).textContent = `Pot ${state.totalPot}s`;
   $("#tv-markets").innerHTML = match ? match.markets.map((market, index) => {
     const betting = state.marketBetting.find((item) => item.marketId === market.id) || { totalStakeSeconds: 0, selections: [] };
     const marketVoid = market.status === "void";
@@ -77,8 +79,14 @@ function render(previous = null) {
   renderLeaderboard();
   renderCountdown();
   if (matchChanged) animateElement("#tv-title");
-  if (statusChanged) animateElement("#tv-status");
-  if (potChanged) animateElement("#tv-pot");
+  if (statusChanged) {
+    animateElement("#tv-status");
+    animateElement("#tv-inline-status");
+  }
+  if (potChanged) {
+    animateElement("#tv-pot");
+    animateElement("#tv-inline-pot");
+  }
   if (oddsChanged) animateElement(".tv-match");
 }
 

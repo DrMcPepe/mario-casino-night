@@ -48,7 +48,7 @@ h2, h3, strong, .selection-name, .tv-title { overflow-wrap: anywhere; }
 .span-7 { grid-column: span 7; }
 .span-8 { grid-column: span 8; }
 .span-12 { grid-column: span 12; }
-.button { background: linear-gradient(#fff, #e8f4f7); color: var(--ink); border-color: #bcd6dd; padding: 11px 15px; font-weight: 850; text-transform: uppercase; letter-spacing: .04em; box-shadow: 0 3px 8px rgba(45,115,132,.12); }
+.button { background: linear-gradient(#fff, #e8f4f7); color: var(--ink); border-color: #bcd6dd; padding: 11px 15px; font-weight: 850; letter-spacing: .02em; box-shadow: 0 3px 8px rgba(45,115,132,.12); }
 .button:hover { transform: translateY(-1px); box-shadow: 0 6px 14px rgba(45,115,132,.18); }
 .button.secondary { background: rgba(255,255,255,.55); color: var(--ink); border-color: var(--line); }
 .button.danger { background: var(--red); border-color: var(--red); color: #fff; }
@@ -115,7 +115,8 @@ h2, h3, strong, .selection-name, .tv-title { overflow-wrap: anywhere; }
 .assignment-record { display: flex; justify-content: space-between; gap: 10px; padding: 6px 0; font-size: .8rem; }
 .record-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
 .record-block { display: grid; padding: 11px; background: var(--panel-2); border-radius: 9px; }
-.record-block span, .record-block small { color: var(--muted); font-size: .66rem; text-transform: uppercase; letter-spacing: .06em; }
+.record-block span, .record-block small { color: var(--muted); font-size: .66rem; letter-spacing: .06em; }
+.record-block span { text-transform: uppercase; }
 .record-block strong { margin: 3px 0; color: var(--cyan); font-size: 1.6rem; }
 .sport-records { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 8px; }
 .sport-records > div { display: grid; gap: 2px; padding: 7px; text-align: center; background: #fff; border: 1px solid #dbeaed; border-radius: 10px; }
@@ -163,11 +164,14 @@ th { color: var(--muted); text-transform: uppercase; letter-spacing: .06em; font
 .tv-top { display: flex; align-items: center; justify-content: space-between; }
 .tv-main { display: grid; grid-template-columns: 1.4fr .7fr; gap: 24px; align-items: stretch; }
 .tv-match { display: flex; flex-direction: column; justify-content: space-between; }
+.tv-match-heading { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+.tv-match-heading #tv-sport { margin-bottom: 8px; font-size: clamp(1.05rem, 1.7vw, 1.45rem); }
+.tv-inline-meta { display: flex; align-items: center; gap: 9px; }
 .tv-title { font-size: clamp(2.4rem, 6vw, 7rem); line-height: .9; max-width: 17ch; text-wrap: balance; }
 .odds-board { display: grid; gap: 8px; }
 .odds-line { display: block; padding: 10px 0; border-bottom: 1px solid var(--line); }
 .market-line-head { display: flex; justify-content: space-between; align-items: center; gap: 14px; margin-bottom: 7px; }
-.market-line-head > span { flex: 0 0 auto; color: var(--muted); font-size: .68rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; }
+.market-line-head > span { flex: 0 0 auto; color: var(--muted); font-size: .68rem; font-weight: 800; letter-spacing: .03em; }
 .market-line-head em { margin-left: 5px; padding: 2px 5px; color: #fff; background: var(--muted); border-radius: 999px; font-size: .58rem; font-style: normal; }
 .market-selections { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
 .tv-selection { min-width: 0; padding: 8px 9px; background: #fff; border: 1px solid #d7e7eb; border-radius: 11px; transition: opacity .25s, transform .25s, border-color .25s; }
@@ -191,13 +195,18 @@ th { color: var(--muted); text-transform: uppercase; letter-spacing: .06em; font
 .leader-rank { display: inline-grid; flex: 0 0 auto; place-items: center; width: 28px; height: 28px; color: #fff; background: linear-gradient(145deg, #64cde0, #248eae); border: 2px solid #fff; border-radius: 50%; box-shadow: 0 3px 8px rgba(30,122,146,.25); font-size: .72rem; font-weight: 900; }
 .leader-name { min-width: 0; flex: 1; overflow-wrap: anywhere; font-weight: 800; }
 html.overlay-root, body.overlay { background: transparent; }
+body:not(.overlay) .tv-top, body:not(.overlay) .ticker { display: none; }
+body:not(.overlay) .tv-shell { grid-template-rows: 1fr; gap: 0; }
+body:not(.overlay) .tv-main { min-height: calc(100vh - 52px); }
 body.overlay .tv-shell { padding: 0; display: block; pointer-events: none; }
+body.overlay .tv-inline-meta { display: none; }
+body.overlay .tv-match-heading #tv-sport { margin-bottom: 8px; font-size: .72rem; }
 body.overlay .tv-top {
   position: fixed;
   z-index: 3;
   top: 24px;
   right: 24px;
-  width: 360px;
+  width: 380px;
   padding: 10px 14px;
   background: rgba(251,254,255,.98);
   border: 2px solid #fff;
@@ -212,10 +221,13 @@ body.overlay .tv-main {
   top: 88px;
   right: 24px;
   display: block;
-  width: 360px;
+  width: 380px;
+  min-width: 0;
 }
 body.overlay .tv-match {
   min-height: 0;
+  max-height: calc(100vh - 180px);
+  overflow: hidden;
   padding: 14px;
   background: rgba(251,254,255,.98);
   border-color: #fff;
@@ -236,7 +248,7 @@ body.overlay .ticker {
   z-index: 4;
   right: 24px;
   bottom: 24px;
-  width: 360px;
+  width: 380px;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
@@ -251,7 +263,7 @@ body.overlay .ticker span { max-width: 100%; padding: 8px 11px; background: rgba
 body.overlay .ticker span i { display: inline-grid; place-items: center; width: 20px; height: 20px; margin-right: 4px; color: #fff; background: var(--cyan); border-radius: 50%; font-size: .65rem; font-style: normal; font-weight: 900; }
 body.overlay .countdown { font-size: 3rem; margin: 7px 0; text-align: right; text-shadow: none; }
 body.overlay.overlay-live .tv-main { top: 88px; }
-body.overlay.overlay-live .tv-match { margin-left: auto; width: 360px; max-width: 360px; padding: 11px 13px; }
+body.overlay.overlay-live .tv-match { margin-left: auto; width: 380px; max-width: 380px; padding: 11px 13px; }
 body.overlay.overlay-live .tv-match > div:last-child { display: block; }
 body.overlay.overlay-live .tv-title { max-width: 320px; font-size: 1.1rem; }
 body.overlay.overlay-live #tv-sport { display: none; }
@@ -260,6 +272,9 @@ body.overlay.overlay-live .odds-board { margin-top: 8px; gap: 0; }
 body.overlay.overlay-live .odds-line { padding: 5px 0; font-size: .68rem; }
 body.overlay.overlay-live .market-line-head { margin-bottom: 4px; }
 body.overlay.overlay-live .tv-selection { padding: 4px 6px; }
+body.overlay.overlay-live .tv-selection-name { font-size: .66rem; line-height: 1.12; }
+body.overlay.overlay-live .tv-selection-data { gap: 4px; }
+body.overlay.overlay-live .tv-selection-data span { font-size: .52rem; }
 body.overlay.overlay-idle .tv-main { display: none; }
 body.overlay.overlay-left .tv-top, body.overlay.overlay-left .tv-main { right: auto; left: 24px; }
 body.overlay.overlay-left .ticker { right: auto; left: 24px; align-items: flex-start; }
