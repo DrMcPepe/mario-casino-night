@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Live Sportsbook | Casino Night</title>
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+  <main class="tv-shell">
+    <header class="tv-top">
+      <div class="brand"><span class="flag"></span><span>Trackside Sportsbook</span></div>
+      <div class="row"><span id="tv-pot" class="pill">Pot 0s</span><span id="tv-status" class="status">Lobby</span></div>
+    </header>
+    <section class="tv-main">
+      <div class="panel tv-match">
+        <div><p id="tv-sport" class="eyebrow">Wii Sports Casino</p><h1 id="tv-title" class="tv-title">Scan. Join. Bet.</h1></div>
+        <div><div id="tv-countdown" class="countdown">--</div><div id="tv-markets" class="odds-board tv-markets-detail"></div></div>
+      </div>
+      <aside class="panel tv-side">
+        <div class="qr-wrap"><p class="eyebrow">Join the book</p><img class="qr" src="/api/qr.svg" alt="QR code for the player app"><p id="join-url" class="muted"></p></div>
+        <hr style="border:0;border-top:1px solid var(--line);margin:20px 0">
+        <p class="eyebrow">Unpaid bar tab</p><div id="tv-ledger" class="ledger"></div>
+      </aside>
+    </section>
+    <footer id="ticker" class="ticker"><strong>BAR TAB</strong><span>All clear</span></footer>
+  </main>
+  <script src="/socket.io/socket.io.js"></script>
+  <script type="module" src="/js/tv.js"></script>
+</body>
+</html>
