@@ -25,7 +25,7 @@ Use the laptop or PC monitor for Dolphin controls and `/admin`. Use OBS Fullscre
 4. Set width and height to 1920 by 1080.
 5. Use a transparent browser-source background.
 
-The transparent overlay behaves like a Twitch chat rail on the selected edge. It shows the sportsbook while betting is open, then automatically collapses to a small live-match badge and stacked bar-tab messages during gameplay.
+The overlay uses solid, Wii-inspired cards in the upper-right and lower-right corners. It shows the sportsbook while betting is open, then automatically collapses to a small live-match badge during gameplay. The lower card rotates every eight seconds through the top five unpaid tabs, Wii Sports match leaders, and wallet holders.
 
 Use `side=left` instead when a game's HUD conflicts with the right edge:
 
@@ -35,7 +35,7 @@ http://localhost:5000/tv?overlay=1&side=left
 
 ### Two Placement Options
 
-For a true overlay, keep the browser source at 1920 by 1080 above Dolphin. Only the edge rail is drawn; the rest is transparent.
+For a normal overlay, keep the browser source at 1920 by 1080 above Dolphin. Only the corner cards are drawn over gameplay.
 
 For zero gameplay obstruction, make the browser source 360 by 1080 and place it at the canvas edge. Resize Dolphin to the remaining canvas width. This creates a Twitch-style dedicated sidebar rather than drawing over the game.
 

@@ -103,6 +103,28 @@ export class EventStore extends EventEmitter {
   constructor(state = initialState()) {
     super();
     this.state = state;
+    this.migrateCreditedProfit();
+  }
+
+  migrateCreditedProfit() {
+    const legacyWins = this.state.bets.filter((bet) => bet.status === "won" && bet.creditedProfit === undefined);
+    const groups = new Map();
+    for (const bet of legacyWins) {
+      const key = `${bet.matchId}:${bet.playerId}`;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(bet);
+    }
+    for (const [key, bets] of groups) {
+      const [matchId, playerId] = key.split(":");
+      const settlement = this.state.walletTransactions.find((transaction) => transaction.kind === "match_settlement" && transaction.matchId === matchId && transaction.playerId === playerId);
+      const settledBets = this.state.bets.filter((bet) => bet.matchId === matchId && bet.playerId === playerId && ["won", "void"].includes(bet.status));
+      const returnedProfitStake = settledBets.reduce((sum, bet) => sum + Number(bet.profitStakeSeconds || 0), 0);
+      let credited = settlement ? Math.max(0, settlement.profitDelta - returnedProfitStake) : bets.reduce((sum, bet) => sum + Number(bet.theoreticalProfit || 0), 0);
+      for (const bet of bets) {
+        bet.creditedProfit = Math.min(credited, Number(bet.theoreticalProfit || 0));
+        credited -= bet.creditedProfit;
+      }
+    }
   }
 
   touch() {
@@ -199,8 +221,8 @@ export class EventStore extends EventEmitter {
       label: "Match winner",
       type: "moneyline",
       selections: [
-        { id: id("selection"), label: one.name, odds: odds(oddsOne, MONEYLINE_ODDS) },
-        { id: id("selection"), label: two.name, odds: odds(oddsTwo, MONEYLINE_ODDS) }
+        { id: id("selection"), label: one.name, playerId: one.id, odds: odds(oddsOne, MONEYLINE_ODDS) },
+        { id: id("selection"), label: two.name, playerId: two.id, odds: odds(oddsTwo, MONEYLINE_ODDS) }
       ],
       winningSelectionId: null,
       status: "pending"
@@ -281,7 +303,7 @@ export class EventStore extends EventEmitter {
     if (!Number.isInteger(stake) || stake <= 0) fail("Stake must be a positive whole number.");
     if (selection.odds.denominator === 2 && stake % 2 !== 0) fail("1.5:1 markets require an even stake.");
     if (stake > wallet(player)) fail("Stake exceeds your wallet.", "INSUFFICIENT_WALLET");
-    const existing = this.state.bets.find((bet) => bet.matchId === match.id && bet.marketId === market.id && bet.playerId === playerId);
+    const existing = this.state.bets.find((bet) => bet.matchId === match.id && bet.marketId === market.id && bet.playerId === playerId && bet.status === "pending");
     if (existing && existing.selectionId !== selectionId) fail("You already backed the other selection in this market.");
 
     const baseStake = Math.min(player.baseSeconds, stake);
@@ -291,12 +313,38 @@ export class EventStore extends EventEmitter {
     const bet = {
       id: id("bet"), matchId: match.id, marketId, playerId, selectionId,
       stakeSeconds: stake, baseStakeSeconds: baseStake, profitStakeSeconds: profitStake,
-      odds: selection.odds, status: "pending", theoreticalProfit: 0, createdAt: now(), settledAt: null
+      odds: selection.odds, status: "pending", theoreticalProfit: 0, creditedProfit: 0, createdAt: now(), settledAt: null
     };
     this.state.bets.push(bet);
     this.transaction(playerId, "bet_placed", -baseStake, -profitStake, { matchId: match.id, betId: bet.id });
     this.touch();
     return bet;
+  }
+
+  cancelMarketBets(playerId, marketId) {
+    const player = this.player(playerId);
+    const match = this.currentMatch();
+    if (!match || match.status !== "betting_open" || Date.now() >= Date.parse(match.bettingClosesAt)) {
+      fail("Bets can be undone only while betting is open.", "BETS_CLOSED");
+    }
+    if (!match.markets.some((market) => market.id === marketId)) fail("Market not found.", "NOT_FOUND");
+    const bets = this.state.bets.filter((bet) => bet.matchId === match.id && bet.marketId === marketId && bet.playerId === playerId && bet.status === "pending");
+    if (!bets.length) fail("You do not have an active bet in this market.", "NOT_FOUND");
+
+    const baseRefund = bets.reduce((sum, bet) => sum + bet.baseStakeSeconds, 0);
+    const profitRefund = bets.reduce((sum, bet) => sum + bet.profitStakeSeconds, 0);
+    if (wallet(player) + baseRefund + profitRefund > RULES.walletCap) fail("Undo would exceed the wallet cap. Ask the host to resolve the pending buy-back first.");
+    player.baseSeconds += baseRefund;
+    player.profitSeconds += profitRefund;
+    const cancelledAt = now();
+    for (const bet of bets) {
+      bet.status = "cancelled";
+      bet.settledAt = cancelledAt;
+    }
+    this.transaction(playerId, "bet_cancelled", baseRefund, profitRefund, { matchId: match.id, marketId });
+    this.cancelIneligibleBuybacks(playerId);
+    this.touch();
+    return { marketId, refundedSeconds: baseRefund + profitRefund, cancelledBets: bets.length };
   }
 
   resolveMatch(outcomes) {
@@ -311,7 +359,7 @@ export class EventStore extends EventEmitter {
 
     const credits = new Map();
     const addCredit = (playerId) => {
-      if (!credits.has(playerId)) credits.set(playerId, { base: 0, profitReturn: 0, earnedProfit: 0 });
+      if (!credits.has(playerId)) credits.set(playerId, { base: 0, profitReturn: 0, earnedProfit: 0, winningBets: [] });
       return credits.get(playerId);
     };
     for (const market of match.markets) {
@@ -332,6 +380,7 @@ export class EventStore extends EventEmitter {
           credit.base += bet.baseStakeSeconds;
           credit.profitReturn += bet.profitStakeSeconds;
           credit.earnedProfit += bet.theoreticalProfit;
+          credit.winningBets.push(bet);
         } else {
           bet.status = "lost";
           this.addBarEntry({ playerId: bet.playerId, kind: "bet_loss", amount: bet.stakeSeconds, unit: "seconds", matchId: match.id, betId: bet.id });
@@ -350,6 +399,11 @@ export class EventStore extends EventEmitter {
       room -= profitReturned;
       const profitAdded = Math.min(room, credit.earnedProfit);
       player.profitSeconds += profitAdded;
+      let unallocatedProfit = profitAdded;
+      for (const bet of credit.winningBets) {
+        bet.creditedProfit = Math.min(unallocatedProfit, bet.theoreticalProfit);
+        unallocatedProfit -= bet.creditedProfit;
+      }
       this.transaction(playerId, "match_settlement", baseAdded, profitReturned + profitAdded, { matchId: match.id });
       this.cancelIneligibleBuybacks(playerId);
     }
@@ -395,9 +449,11 @@ export class EventStore extends EventEmitter {
     }
     source.profitSeconds -= amount;
     target.receivedAssignedSeconds += amount;
-    const assignment = { id: id("assignment"), sourcePlayerId, targetPlayerId, amountSeconds: amount, createdAt: now() };
+    const sourceMatch = this.currentMatch();
+    const sourceMatchId = sourceMatch?.status === "resolved" ? sourceMatch.id : null;
+    const assignment = { id: id("assignment"), sourcePlayerId, targetPlayerId, amountSeconds: amount, sourceMatchId, createdAt: now() };
     this.state.assignments.push(assignment);
-    const entry = this.addBarEntry({ playerId: targetPlayerId, sourcePlayerId, kind: "assignment", amount, unit: "seconds" });
+    const entry = this.addBarEntry({ playerId: targetPlayerId, sourcePlayerId, kind: "assignment", amount, unit: "seconds", matchId: sourceMatchId });
     assignment.barEntryId = entry.id;
     this.transaction(sourcePlayerId, "assignment", 0, -amount, { assignmentId: assignment.id });
     this.touch();
@@ -407,6 +463,9 @@ export class EventStore extends EventEmitter {
   requestBuyback(playerId) {
     const player = this.player(playerId);
     if (wallet(player) !== 0) fail("Buy-backs are available only at a zero wallet.");
+    const match = this.currentMatch();
+    const hasOpenBets = match?.status === "betting_open" && this.state.bets.some((bet) => bet.matchId === match.id && bet.playerId === playerId && bet.status === "pending");
+    if (hasOpenBets) fail("Undo your open bets or wait for betting to lock before requesting a buy-back.");
     if (this.state.buybacks.some((item) => item.playerId === playerId && item.status === "pending")) fail("A buy-back is already pending.");
     const buyback = { id: id("buyback"), playerId, status: "pending", requestedAt: now(), servedAt: null };
     const entry = this.addBarEntry({ playerId, kind: "buyback", amount: 1, unit: "shot", buybackId: buyback.id });
@@ -475,27 +534,131 @@ export class EventStore extends EventEmitter {
     this.state.walletTransactions.push({ id: id("tx"), playerId, kind, baseDelta, profitDelta, createdAt: now(), ...references });
   }
 
+  resetEvent() {
+    const fresh = initialState();
+    fresh.revision = this.state.revision + 1;
+    fresh.players = this.state.players.map((player) => ({
+      ...player,
+      baseSeconds: RULES.startingWallet,
+      profitSeconds: 0,
+      receivedAssignedSeconds: 0
+    }));
+    this.state = fresh;
+    this.emit("change", this.state);
+    return this.state.players.map(publicPlayer);
+  }
+
+  statistics(players) {
+    const sports = ["tennis", "bowling", "boxing", "golf"];
+    const records = new Map(players.map((player) => [player.id, {
+      playerId: player.id,
+      playerName: player.name,
+      betting: { wins: 0, losses: 0, profitSeconds: 0, lostSeconds: 0, netSeconds: 0 },
+      matches: { wins: 0, losses: 0, bySport: Object.fromEntries(sports.map((sport) => [sport, { wins: 0, losses: 0 }])) }
+    }]));
+
+    const settledMarkets = new Map();
+    for (const bet of this.state.bets.filter((item) => ["won", "lost"].includes(item.status))) {
+      const key = `${bet.playerId}:${bet.matchId}:${bet.marketId}`;
+      if (!settledMarkets.has(key)) settledMarkets.set(key, { playerId: bet.playerId, status: bet.status, profitSeconds: 0, lostSeconds: 0 });
+      const result = settledMarkets.get(key);
+      result.profitSeconds += Number(bet.creditedProfit ?? 0);
+      if (bet.status === "lost") result.lostSeconds += bet.stakeSeconds;
+    }
+    for (const result of settledMarkets.values()) {
+      const record = records.get(result.playerId);
+      if (!record) continue;
+      if (result.status === "won") {
+        record.betting.wins += 1;
+        record.betting.profitSeconds += result.profitSeconds;
+      } else {
+        record.betting.losses += 1;
+        record.betting.lostSeconds += result.lostSeconds;
+      }
+    }
+    for (const record of records.values()) {
+      record.betting.netSeconds = record.betting.profitSeconds - record.betting.lostSeconds;
+    }
+
+    for (const match of this.state.matches.filter((item) => item.status === "resolved")) {
+      const moneyline = match.markets.find((market) => market.type === "moneyline");
+      const winningSelection = moneyline?.selections.find((selection) => selection.id === moneyline.winningSelectionId);
+      const winnerId = winningSelection?.playerId || players.find((player) => player.name === winningSelection?.label)?.id;
+      const loserId = [match.competitorOneId, match.competitorTwoId].find((id) => id !== winnerId);
+      const winner = records.get(winnerId);
+      const loser = records.get(loserId);
+      if (!winner || !loser || !winner.matches.bySport[match.sport]) continue;
+      winner.matches.wins += 1;
+      winner.matches.bySport[match.sport].wins += 1;
+      loser.matches.losses += 1;
+      loser.matches.bySport[match.sport].losses += 1;
+    }
+    return [...records.values()];
+  }
+
   snapshot(role = "guest", playerId = null) {
     const players = this.state.players.map(publicPlayer);
+    const statistics = this.statistics(players);
     const match = this.currentMatch();
     const currentBets = match ? this.state.bets.filter((bet) => bet.matchId === match.id) : [];
     const totalPot = currentBets.filter((bet) => bet.status === "pending").reduce((sum, bet) => sum + bet.stakeSeconds, 0);
     const unpaidBar = this.state.barEntries.filter((entry) => entry.status === "pending").map((entry) => ({
       ...entry,
       playerName: players.find((player) => player.id === entry.playerId)?.name || "Unknown",
-      sourceName: players.find((player) => player.id === entry.sourcePlayerId)?.name || null
+      sourceName: players.find((player) => player.id === entry.sourcePlayerId)?.name || null,
+      matchTitle: this.state.matches.find((item) => item.id === entry.matchId)?.title || null,
+      sport: this.state.matches.find((item) => item.id === entry.matchId)?.sport || null
     }));
+    const groupedBar = new Map();
+    for (const entry of unpaidBar) {
+      const context = entry.kind === "bet_loss" ? entry.matchId : entry.kind === "assignment" ? `${entry.sourcePlayerId}:${entry.matchId || "none"}` : entry.note || entry.id;
+      const key = [entry.playerId, entry.kind, entry.unit, context || "none"].join(":");
+      if (!groupedBar.has(key)) {
+        groupedBar.set(key, {
+          key,
+          entryIds: [],
+          playerId: entry.playerId,
+          playerName: entry.playerName,
+          kind: entry.kind,
+          unit: entry.unit,
+          amount: 0,
+          sourcePlayerId: entry.sourcePlayerId,
+          sourceName: entry.sourceName,
+          matchId: entry.matchId,
+          matchTitle: entry.matchTitle,
+          sport: entry.sport,
+          note: entry.note,
+          count: 0
+        });
+      }
+      const group = groupedBar.get(key);
+      group.entryIds.push(entry.id);
+      group.amount += entry.amount;
+      group.count += 1;
+    }
+    const barGroups = [...groupedBar.values()];
     const common = {
       revision: this.state.revision,
       rules: RULES,
       players,
       currentMatch: match ? structuredClone(match) : null,
       totalPot,
-      unpaidBar
+      unpaidBar,
+      barGroups,
+      statistics
     };
     if (role === "player") {
       const self = players.find((player) => player.id === playerId) || null;
-      return { ...common, role, self, myBets: currentBets.filter((bet) => bet.playerId === playerId) };
+      const myAssignments = this.state.assignments
+        .filter((assignment) => assignment.sourcePlayerId === playerId)
+        .slice(-8)
+        .reverse()
+        .map((assignment) => ({
+          ...assignment,
+          targetName: players.find((player) => player.id === assignment.targetPlayerId)?.name || "Unknown",
+          matchTitle: this.state.matches.find((item) => item.id === assignment.sourceMatchId)?.title || null
+        }));
+      return { ...common, role, self, selfStats: statistics.find((record) => record.playerId === playerId), myBets: currentBets.filter((bet) => bet.playerId === playerId), myAssignments };
     }
     if (role === "admin") {
       return {

@@ -13,7 +13,12 @@ A local-first, real-time Wii Sports sportsbook and printable Beerio Kart event s
 - 15-second starting wallets and a 60-second wallet cap
 - Lost wagers converted into equal self-drinking debt
 - Profit-only assignments with a 20-second lifetime recipient cap
+- Undo for any pending market bet while betting is still open
+- Grouped unpaid tabs with match and assignment context
+- Sportsbook and per-sport Wii Sports W-L records for every player
 - Host-confirmed shot buy-backs worth 5 seconds
+- One-button test-event reset that preserves player names and phone claims
+- Wii-inspired responsive interface and rotating TV top-five boards for tabs, match leaders, and wallets
 - In-memory operation with an optional local JSON recovery checkpoint
 
 ## Requirements
@@ -63,6 +68,12 @@ PUBLIC_URL=http://192.168.1.42:5000
 The admin accepts exactly 13 unique names. Paste one per line, paste a comma-separated list, or choose a text/CSV file. A first row containing `name`, `player`, or `player name` is ignored.
 
 Replacing a roster after activity begins requires confirmation and resets the event.
+
+## Testing Reset
+
+The admin panel's **Reset test event** button clears all wallets, bets, match records, assignments, bar entries, and active matches. It keeps the 13 player names and existing phone claims so another test can begin immediately.
+
+Players can undo all pending stakes in one market while the betting timer remains open. Once the host locks the book or the timer expires, those bets are final.
 
 ## OBS
 

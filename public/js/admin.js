@@ -68,15 +68,25 @@ $("#import-roster").addEventListener("click", async () => {
 
 function statusText(status) { return ({ draft: "Draft", betting_open: "Bets open", betting_locked: "Bets closed", live: "Live", resolved: "Resolved", void: "Void" })[status] || "Lobby"; }
 function playerName(id) { return state?.players.find((player) => player.id === id)?.name || "Unknown"; }
+function groupCopy(group) {
+  if (group.kind === "bet_loss") return { title: "Bet losses", detail: group.matchTitle || "Previous match" };
+  if (group.kind === "assignment") return { title: `Assigned by ${group.sourceName || "another player"}`, detail: group.matchTitle || "Opponent assignment" };
+  if (group.kind === "buyback") return { title: "Buy-back shot", detail: "Serve to release 5 wallet seconds" };
+  return { title: group.note || "Host entry", detail: "Manual bartender entry" };
+}
 
 function render() {
   const authenticated = state?.role === "admin";
   $("#login").classList.toggle("hidden", authenticated);
   $("#admin").classList.toggle("hidden", !authenticated);
+  $("#reset-event").classList.toggle("hidden", !authenticated);
   if (!authenticated) return;
 
   $("#player-count").textContent = `${state.players.length}/13`;
-  $("#admin-players").innerHTML = state.players.length ? state.players.map((player) => `<div class="profile"><div class="row between"><strong>${esc(player.name)}</strong><span class="connection ${player.connected ? "online" : ""}">${player.connected ? "online" : player.claimed ? "claimed" : "open"}</span></div><div class="muted" style="margin-top:7px">Wallet ${player.walletSeconds}s | Profit ${player.profitSeconds}s | Target ${player.receivedAssignedSeconds}/${state.rules.assignmentCap}</div>${player.claimed ? `<button class="button secondary small" data-release="${player.id}" style="margin-top:8px">Release</button>` : ""}</div>`).join("") : `<p class="muted">Import the roster to begin.</p>`;
+  $("#admin-players").innerHTML = state.players.length ? state.players.map((player) => {
+    const stats = state.statistics.find((record) => record.playerId === player.id);
+    return `<div class="profile"><div class="row between"><strong>${esc(player.name)}</strong><span class="connection ${player.connected ? "online" : ""}">${player.connected ? "online" : player.claimed ? "claimed" : "open"}</span></div><div class="player-metrics"><span>Wallet <b>${player.walletSeconds}s</b></span><span>Profit <b>${player.profitSeconds}s</b></span><span>Target <b>${player.receivedAssignedSeconds}/${state.rules.assignmentCap}</b></span><span>Sports <b>${stats.matches.wins}-${stats.matches.losses}</b></span></div>${player.claimed ? `<button class="button secondary small" data-release="${player.id}" style="margin-top:8px">Release</button>` : ""}</div>`;
+  }).join("") : `<p class="muted">Import the roster to begin.</p>`;
 
   const optionHtml = state.players.map((player) => `<option value="${player.id}">${esc(player.name)}</option>`).join("");
   for (const selector of ["#competitor-one", "#competitor-two", "#manual-player"]) {
@@ -91,7 +101,17 @@ function render() {
   $("#admin-match-status").className = `status ${match?.status === "betting_open" ? "open" : match?.status === "live" ? "live" : ""}`;
   $("#admin-match").innerHTML = match ? `<div class="table-wrap"><table><thead><tr><th>Market</th><th>Outcome</th></tr></thead><tbody>${match.markets.map((market) => `<tr><td><strong>${esc(market.label)}</strong><br><span class="muted">${market.selections.map((selection) => `${esc(selection.label)} ${selection.odds.label}`).join(" / ")}</span></td><td><select class="outcome" data-market="${market.id}" ${["resolved", "void"].includes(match.status) ? "disabled" : ""}><option value="">Choose...</option>${market.selections.map((selection) => `<option value="${selection.id}" ${market.winningSelectionId === selection.id ? "selected" : ""}>${esc(selection.label)}</option>`).join("")}<option value="void">Void market</option></select></td></tr>`).join("")}</tbody></table></div><p class="muted" style="margin-top:10px">Current pot: <strong>${state.totalPot}s</strong></p>` : `<p class="muted">Create a match card after importing players.</p>`;
 
-  $("#admin-ledger").innerHTML = state.unpaidBar.length ? state.unpaidBar.map((entry) => `<div class="ledger-item"><div><strong>${esc(entry.playerName)}</strong><br><span class="muted">${esc(entry.kind.replace("_", " "))}${entry.sourceName ? ` from ${esc(entry.sourceName)}` : ""}</span></div><div class="row"><strong>${entry.amount} ${esc(entry.unit)}</strong><button class="button green small" data-serve="${entry.id}">Served</button></div></div>`).join("") : `<p class="muted">No unpaid drinks.</p>`;
+  const tabSeconds = state.barGroups.filter((group) => group.unit === "seconds").reduce((sum, group) => sum + group.amount, 0);
+  const tabShots = state.barGroups.filter((group) => group.unit === "shot").reduce((sum, group) => sum + group.amount, 0);
+  const tabSips = state.barGroups.filter((group) => group.unit === "sips").reduce((sum, group) => sum + group.amount, 0);
+  $("#admin-tab-total").textContent = `${tabSeconds}s${tabShots ? ` + ${tabShots} shot${tabShots === 1 ? "" : "s"}` : ""}${tabSips ? ` + ${tabSips} sips` : ""} currently owed`;
+  $("#admin-ledger").innerHTML = state.barGroups.length ? state.barGroups.map((group) => {
+    const copy = groupCopy(group);
+    return `<div class="ledger-item"><div class="ledger-copy"><strong>${esc(group.playerName)}</strong><span>${esc(copy.title)} • ${esc(copy.detail)}</span>${group.count > 1 ? `<small>${group.count} entries combined</small>` : ""}</div><div class="row"><strong class="ledger-amount">${group.amount} ${esc(group.unit)}</strong><button class="button green small" data-serve-group="${group.entryIds.join(",")}">Served</button></div></div>`;
+  }).join("") : `<div class="empty-state"><strong>No unpaid drinks</strong><span>The service queue is clear.</span></div>`;
+
+  const standings = [...state.statistics].sort((a, b) => b.matches.wins - a.matches.wins || a.matches.losses - b.matches.losses || b.betting.netSeconds - a.betting.netSeconds);
+  $("#standings").innerHTML = standings.length ? `<table class="standings-table"><thead><tr><th>Player</th><th>All sports</th><th>Tennis</th><th>Bowling</th><th>Boxing</th><th>Golf</th><th>Bet record</th><th>Bet net</th></tr></thead><tbody>${standings.map((record, index) => `<tr><td><span class="rank">${index + 1}</span><strong>${esc(record.playerName)}</strong></td><td>${record.matches.wins}-${record.matches.losses}</td><td>${record.matches.bySport.tennis.wins}-${record.matches.bySport.tennis.losses}</td><td>${record.matches.bySport.bowling.wins}-${record.matches.bySport.bowling.losses}</td><td>${record.matches.bySport.boxing.wins}-${record.matches.bySport.boxing.losses}</td><td>${record.matches.bySport.golf.wins}-${record.matches.bySport.golf.losses}</td><td>${record.betting.wins}-${record.betting.losses}</td><td class="${record.betting.netSeconds >= 0 ? "positive" : "negative"}">${record.betting.netSeconds >= 0 ? "+" : ""}${record.betting.netSeconds}s</td></tr>`).join("")}</tbody></table>` : `<p class="muted">Import players to see standings.</p>`;
 
   const canCreate = state.players.length === 13;
   $("#create-match").disabled = !canCreate;
@@ -120,11 +140,11 @@ $("#create-match").addEventListener("click", async () => {
 document.addEventListener("click", async (event) => {
   const release = event.target.closest("[data-release]");
   const open = event.target.closest("[data-open]");
-  const serve = event.target.closest("[data-serve]");
+  const serve = event.target.closest("[data-serve-group]");
   try {
     if (release && confirm("Release this phone profile?")) await send("admin:player.release", { playerId: release.dataset.release });
     if (open) await send("admin:betting.open", { durationSeconds: Number(open.dataset.open) });
-    if (serve) await send("admin:bar.serve", { entryIds: [serve.dataset.serve] });
+    if (serve) await send("admin:bar.serve", { entryIds: serve.dataset.serveGroup.split(",") });
   } catch (error) { toast(error.message, true); }
 });
 
@@ -146,4 +166,11 @@ $("#manual-add").addEventListener("click", async () => {
     await send("admin:bar.manual", { playerId: $("#manual-player").value, amount: Number($("#manual-amount").value), unit: $("#manual-unit").value, note: $("#manual-note").value });
     toast("Manual entry added");
   } catch (error) { toast(error.message, true); }
+});
+$("#reset-event").addEventListener("click", async () => {
+  const message = "Reset all wallets, bets, match records, assignments, tabs, and matches? Player names and claimed phones will stay connected.";
+  if (!confirm(message)) return;
+  if (!confirm("This cannot be undone. Reset the test event now?")) return;
+  try { await send("admin:event.reset"); toast("Event data reset. All wallets are back to 15s."); }
+  catch (error) { toast(error.message, true); }
 });

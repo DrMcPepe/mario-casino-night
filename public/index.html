@@ -27,10 +27,11 @@
         <div><p class="eyebrow">Signed in as</p><h2 id="player-name">Player</h2></div>
         <button id="forget-profile" class="button secondary small">Forget phone</button>
       </div>
-      <div class="stats">
+      <div class="stats four">
         <div class="stat"><strong id="wallet">0s</strong><span>Wallet</span></div>
         <div class="stat"><strong id="profit">0s</strong><span>Assignable</span></div>
         <div class="stat"><strong id="received">0/20</strong><span>Received</span></div>
+        <div class="stat debt-stat"><strong id="owed">0s</strong><span>You owe</span></div>
       </div>
 
       <div class="grid" style="margin-top:14px">
@@ -40,25 +41,43 @@
             <span id="match-status" class="status">Lobby</span>
           </div>
           <div id="countdown" class="countdown">--</div>
+          <div id="bet-summary" class="bet-summary hidden"></div>
           <div id="stake-row" class="stake-row">
             <button class="stake active" data-stake="1">1s</button>
             <button class="stake" data-stake="2">2s</button>
             <button class="stake" data-stake="5">5s</button>
             <button class="stake" data-stake="all">All-in</button>
           </div>
+          <p id="bet-hint" class="helper-text">Choose an amount, then tap the outcome you want. You can undo while betting is open.</p>
           <div id="markets"></div>
         </section>
 
         <div class="span-5">
           <section class="panel">
+            <p class="eyebrow">Your scorecard</p>
+            <div class="record-grid">
+              <div class="record-block"><span>Wii Sports</span><strong id="match-record">0-0</strong><small>match record</small></div>
+              <div class="record-block"><span>Sportsbook</span><strong id="bet-record">0-0</strong><small id="bet-net">net 0s</small></div>
+            </div>
+            <div id="sport-records" class="sport-records"></div>
+          </section>
+          <section class="panel">
             <p class="eyebrow">Spend your profit</p>
             <h2>Assign seconds</h2>
             <label class="field">Target<select id="assignment-target"></select></label>
             <label class="field" style="margin-top:10px">Seconds<input id="assignment-amount" type="number" min="1" step="1" value="1"></label>
-            <button id="assign-button" class="button danger" style="width:100%;margin-top:10px">Assign</button>
+            <div class="amount-row" aria-label="Quick assignment amounts">
+              <button class="amount-chip" data-assign-amount="1">1s</button>
+              <button class="amount-chip" data-assign-amount="5">5s</button>
+              <button class="amount-chip" data-assign-amount="max">Max</button>
+            </div>
+            <div id="assignment-preview" class="assignment-preview"></div>
+            <button id="assign-button" class="button danger" style="width:100%;margin-top:10px">Assign seconds</button>
+            <div id="assignment-history" class="assignment-history"></div>
           </section>
           <section class="panel">
             <div class="row between"><div><p class="eyebrow">Master bartender</p><h2>Your unpaid tab</h2></div><button id="buyback" class="button green small hidden">Request buy-back</button></div>
+            <div id="tab-total" class="tab-total"><strong>0s</strong><span>Total currently owed</span></div>
             <div id="my-ledger" class="ledger"></div>
           </section>
         </div>

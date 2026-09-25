@@ -14,6 +14,8 @@ Base credits come from the starting 15 seconds, returned base stakes, and confir
 
 Bets consume base before profit. Settlement credits returned base, returned profit stake, and new profit in that order. Anything above the wallet cap is discarded.
 
+While a match remains `betting_open`, a player can cancel all pending stakes in one market. The server returns each stake to its original base or profit bucket and removes it from the pot. Cancellation is rejected after the deadline or lock.
+
 ## Drinking Debt
 
 A losing stake creates a `bet_loss` bar entry with the same number of seconds. These self-incurred entries are uncapped.
@@ -21,6 +23,14 @@ A losing stake creates a `bet_loss` bar entry with the same number of seconds. T
 An assignment deducts source profit, increments the recipient's lifetime `receivedAssignedSeconds`, and creates an `assignment` bar entry. The server rejects any assignment that would put a recipient above 20 seconds. Serving the entry does not lower `receivedAssignedSeconds`.
 
 Buy-backs create a pending one-shot entry. The 5-second base credit is awarded only when the host marks that entry served.
+
+Raw bar entries remain immutable for audit purposes. Snapshots additionally group pending entries by player, source, and match so clients can show one readable obligation while sending all underlying entry IDs when the host serves it.
+
+## Statistics
+
+Betting records count settled winning and losing markets. Bet net is actual credited profit minus lost stake seconds, so wallet-cap clipping is reflected correctly.
+
+Wii Sports records use the resolved moneyline outcome to count match wins and losses overall and by Tennis, Bowling, Boxing, and Golf. Voided moneylines do not affect records.
 
 ## Match State
 
@@ -44,6 +54,7 @@ All client payloads are revalidated by `EventStore`. UI-disabled buttons are con
 | `session:claim` | player to server | Claim an open profile |
 | `session:resume` | player to server | Reconnect with saved token |
 | `bet:place` | player to server | Submit a validated wager |
+| `bet:cancel` | player to server | Undo one market's pending stakes before lock |
 | `assignment:create` | player to server | Spend profit against an eligible target |
 | `buyback:request` | player to server | Request a pending buy-back shot |
 | `admin:roster.import` | admin to server | Validate and set exactly 13 users |
@@ -51,6 +62,7 @@ All client payloads are revalidated by `EventStore`. UI-disabled buttons are con
 | `admin:betting.open` | admin to server | Start the authoritative timer |
 | `admin:match.resolve` | admin to server | Settle every market atomically |
 | `admin:bar.serve` | admin to server | Mark entries served and credit buy-backs |
+| `admin:event.reset` | admin to server | Clear event activity while preserving roster and claims |
 | `state:snapshot` | server to client | Role-filtered current state |
 
 Each request uses a Socket.IO acknowledgement containing `{ ok, result }` or `{ ok, error, code }`.

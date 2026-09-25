@@ -9,7 +9,7 @@
 <body>
   <div class="checkers"></div>
   <main class="shell">
-    <header class="masthead"><div class="brand"><span class="flag"></span><span>Host Control</span></div><span id="connection" class="connection">Connecting</span></header>
+    <header class="masthead"><div class="brand"><span class="flag"></span><span>Host Control</span></div><div class="row"><span id="connection" class="connection">Connecting</span><button id="reset-event" class="button danger small hidden">Reset test event</button></div></header>
     <section id="login" class="panel admin-login">
       <p class="eyebrow">Restricted lane</p><h1 style="font-size:3rem">Host PIN</h1>
       <label class="field">PIN<input id="pin" type="password" inputmode="numeric" autofocus></label>
@@ -45,7 +45,7 @@
         </section>
 
         <section class="panel span-8">
-          <div class="row between"><div><p class="eyebrow">Live service queue</p><h2>Unpaid bar tab</h2></div><button id="serve-all" class="button green small">Serve all shown</button></div>
+          <div class="row between"><div><p class="eyebrow">Live service queue</p><h2>Unpaid bar tab</h2><p id="admin-tab-total" class="muted"></p></div><button id="serve-all" class="button green small">Serve all shown</button></div>
           <div id="admin-ledger" class="ledger"></div>
         </section>
         <section class="panel span-4">
@@ -54,6 +54,11 @@
           <div class="grid" style="margin-top:10px"><label class="field span-6">Amount<input id="manual-amount" type="number" min="1" value="1"></label><label class="field span-6">Unit<select id="manual-unit"><option value="seconds">seconds</option><option value="shot">shot</option><option value="sips">sips</option></select></label></div>
           <label class="field" style="margin-top:10px">Note<input id="manual-note" placeholder="Optional reason"></label>
           <button id="manual-add" class="button secondary" style="width:100%;margin-top:10px">Add to tab</button>
+        </section>
+
+        <section class="panel span-12">
+          <div class="row between"><div><p class="eyebrow">Across every sport</p><h2>Player standings</h2></div><span class="pill">W-L records</span></div>
+          <div id="standings" class="table-wrap"></div>
         </section>
       </div>
     </section>

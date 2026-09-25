@@ -87,6 +87,14 @@ test("socket workflow imports 13 players and revokes a released phone", { timeou
   const moneyline = created.result.markets[0];
   assert.equal((await emit(player, "bet:place", {
     marketId: moneyline.id,
+    selectionId: moneyline.selections[0].id,
+    stakeSeconds: 1
+  })).ok, true);
+  const cancelled = await emit(player, "bet:cancel", { marketId: moneyline.id });
+  assert.equal(cancelled.ok, true);
+  assert.equal(cancelled.result.refundedSeconds, 1);
+  assert.equal((await emit(player, "bet:place", {
+    marketId: moneyline.id,
     selectionId: moneyline.selections[1].id,
     stakeSeconds: 15
   })).ok, true);
@@ -104,4 +112,10 @@ test("socket workflow imports 13 players and revokes a released phone", { timeou
   assert.equal((await emit(admin, "admin:bar.serve", { entryIds: [buybackEntry.id] })).ok, true);
   const credited = await creditedPromise;
   assert.equal(credited.self.walletSeconds, 5);
+
+  const resetPromise = nextSnapshot(player, (snapshot) => snapshot.self?.walletSeconds === 15 && snapshot.currentMatch === null);
+  assert.equal((await emit(admin, "admin:event.reset")).ok, true);
+  const resetState = await resetPromise;
+  assert.equal(resetState.selfStats.betting.wins, 0);
+  assert.equal(resetState.selfStats.matches.wins, 0);
 });

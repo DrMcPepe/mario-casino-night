@@ -159,6 +159,7 @@ io.on("connection", (socket) => {
   });
 
   on(socket, "bet:place", (payload) => store.placeBet(socket.data.playerId, payload), { player: true });
+  on(socket, "bet:cancel", ({ marketId }) => store.cancelMarketBets(socket.data.playerId, marketId), { player: true });
   on(socket, "assignment:create", ({ targetPlayerId, amountSeconds }) => store.assignSeconds(socket.data.playerId, targetPlayerId, amountSeconds), { player: true });
   on(socket, "buyback:request", () => store.requestBuyback(socket.data.playerId), { player: true });
 
@@ -198,6 +199,11 @@ io.on("connection", (socket) => {
   on(socket, "admin:match.void", () => store.voidMatch(), { admin: true });
   on(socket, "admin:bar.serve", ({ entryIds }) => store.serveBarEntries(entryIds), { admin: true });
   on(socket, "admin:bar.manual", (payload) => store.addManualBarEntry(payload), { admin: true });
+  on(socket, "admin:event.reset", () => {
+    if (bettingTimer) clearTimeout(bettingTimer);
+    bettingTimer = null;
+    return store.resetEvent();
+  }, { admin: true });
 
   on(socket, "state:request", () => emitSnapshot(socket));
 
