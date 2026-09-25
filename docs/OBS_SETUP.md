@@ -27,6 +27,22 @@ Use the laptop or PC monitor for Dolphin controls and `/admin`. Use OBS Fullscre
 
 The overlay uses solid, Wii-inspired cards in the upper-right and lower-right corners. The upper card keeps the active markets and odds visible before and during gameplay, switching to a compact layout after betting locks. Match, status, pot, odds, and leaderboard changes animate automatically. The lower card rotates every eight seconds through the top five unpaid tabs, Wii Sports match leaders, and wallet holders.
 
+### Crop Guide
+
+Temporarily use this URL while positioning the OBS Browser Source:
+
+```text
+http://localhost:5000/tv?overlay=1&side=right&guide=1
+```
+
+At a 1920 by 1080 Browser Source, the dashed rectangle marks the complete 460-pixel-wide safe area. Hold `Alt` and drag only the source's left edge until it meets the dashed line. Keep the full source height so the upper and lower cards both remain visible.
+
+After cropping, change the URL back to remove the guide from the event output:
+
+```text
+http://localhost:5000/tv?overlay=1&side=right
+```
+
 Use `side=left` instead when a game's HUD conflicts with the right edge:
 
 ```text

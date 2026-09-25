@@ -5,6 +5,7 @@ if (overlay) {
   document.documentElement.classList.add("overlay-root");
   document.body.classList.add("overlay");
   if (parameters.get("side") === "left") document.body.classList.add("overlay-left");
+  if (parameters.get("guide") === "1") document.body.classList.add("overlay-guide");
 }
 let state = null;
 let boardIndex = 0;

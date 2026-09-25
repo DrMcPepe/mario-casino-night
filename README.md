@@ -88,6 +88,8 @@ Use three scenes:
 
 See [`docs/OBS_SETUP.md`](docs/OBS_SETUP.md) for the full setup.
 
+Use `http://localhost:5000/tv?overlay=1&side=right&guide=1` temporarily to display the OBS crop-safe outline.
+
 ## State and Reset
 
 Runtime state is held in memory. With `STATE_CHECKPOINT=true`, each mutation is also written to ignored local file `data/event-state.json` for restart recovery.
