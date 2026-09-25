@@ -55,7 +55,7 @@ function betStatusLabel(status) {
 }
 
 function barGroupCopy(group) {
-  if (group.kind === "bet_loss") return { title: "Bet losses", detail: group.matchTitle || "Previous match" };
+  if (group.kind === "bet_loss") return { title: `Bet losses${group.sport ? ` • ${group.sport[0].toUpperCase()}${group.sport.slice(1)}` : ""}`, detail: group.matchTitle || "Previous match" };
   if (group.kind === "assignment") return { title: `Assigned by ${group.sourceName || "another player"}`, detail: group.matchTitle || "Opponent assignment" };
   if (group.kind === "buyback") return { title: "Buy-back shot", detail: "Credit added after the host serves it" };
   return { title: group.note || "Host entry", detail: "Added by the bartender" };

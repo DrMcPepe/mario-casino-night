@@ -12,14 +12,39 @@ const $ = (selector) => document.querySelector(selector);
 const esc = (value) => String(value ?? "").replace(/[&<>'"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character]);
 
 socket.on("connect", () => socket.emit("viewer:join", { role: "tv" }));
-socket.on("state:snapshot", (snapshot) => { state = snapshot; render(); });
+socket.on("state:snapshot", (snapshot) => {
+  const previous = state;
+  state = snapshot;
+  render(previous);
+});
 fetch("/api/config").then((response) => response.json()).then((data) => { $("#join-url").textContent = data.publicUrl; });
 
 function statusText(status) { return ({ draft: "Coming up", betting_open: "Bets open", betting_locked: "Bets closed", live: "Live", resolved: "Final", void: "Void" })[status] || "Lobby"; }
 
-function render() {
+function marketSignature(snapshot) {
+  return JSON.stringify(snapshot?.currentMatch?.markets.map((market) => ({
+    id: market.id,
+    result: market.winningSelectionId,
+    selections: market.selections.map((selection) => [selection.id, selection.odds.label])
+  })) || []);
+}
+
+function animateElement(selector) {
+  const element = $(selector);
+  if (!element) return;
+  element.classList.remove("tv-updated");
+  void element.offsetWidth;
+  element.classList.add("tv-updated");
+  element.addEventListener("animationend", () => element.classList.remove("tv-updated"), { once: true });
+}
+
+function render(previous = null) {
   if (!state) return;
   const match = state.currentMatch;
+  const matchChanged = previous?.currentMatch?.id !== match?.id;
+  const statusChanged = previous?.currentMatch?.status !== match?.status;
+  const oddsChanged = marketSignature(previous) !== marketSignature(state);
+  const potChanged = previous?.totalPot !== state.totalPot;
   if (overlay) {
     document.body.classList.toggle("overlay-live", ["betting_locked", "live"].includes(match?.status));
     document.body.classList.toggle("overlay-idle", !match || ["resolved", "void"].includes(match.status));
@@ -29,10 +54,14 @@ function render() {
   $("#tv-status").textContent = statusText(match?.status);
   $("#tv-status").className = `status ${match?.status === "betting_open" ? "open" : match?.status === "live" ? "live" : ""}`;
   $("#tv-pot").textContent = `Pot ${state.totalPot}s`;
-  $("#tv-markets").innerHTML = match ? match.markets.map((market) => `<div class="odds-line"><strong>${esc(market.label)}</strong><span>${market.selections.map((selection) => `${esc(selection.label)} <b style="color:var(--green)">${selection.odds.label}</b>`).join(" &nbsp; ")}</span></div>`).join("") : "";
+  $("#tv-markets").innerHTML = match ? match.markets.map((market, index) => `<div class="odds-line${oddsChanged ? " odds-updated" : ""}" style="--odds-delay:${index * 70}ms"><strong>${esc(market.label)}</strong><span>${market.selections.map((selection) => `${esc(selection.label)} <b>${selection.odds.label}</b>`).join(" &nbsp; ")}</span></div>`).join("") : "";
 
   renderLeaderboard();
   renderCountdown();
+  if (matchChanged) animateElement("#tv-title");
+  if (statusChanged) animateElement("#tv-status");
+  if (potChanged) animateElement("#tv-pot");
+  if (oddsChanged) animateElement(".tv-match");
 }
 
 function leaderboardData() {
@@ -79,6 +108,8 @@ function renderLeaderboard() {
   $("#tv-board-title").textContent = board.title;
   $("#tv-ledger").innerHTML = board.items.length ? board.items.map((item, index) => `<div class="ledger-item leaderboard-row"><span class="leader-rank">${index + 1}</span><span class="leader-name">${esc(item.name)}</span><strong>${esc(item.value)}</strong></div>`).join("") : `<p class="muted">${esc(board.empty)}</p>`;
   $("#ticker").innerHTML = board.items.length ? `<strong>${esc(board.title)}</strong>${board.items.map((item, index) => `<span><i>${index + 1}</i> ${esc(item.name)} <b>${esc(item.value)}</b></span>`).join("")}` : `<strong>${esc(board.title)}</strong><span>${esc(board.empty)}</span>`;
+  animateElement("#tv-board-title");
+  animateElement("#ticker");
 }
 
 function renderCountdown() {

@@ -69,7 +69,7 @@ $("#import-roster").addEventListener("click", async () => {
 function statusText(status) { return ({ draft: "Draft", betting_open: "Bets open", betting_locked: "Bets closed", live: "Live", resolved: "Resolved", void: "Void" })[status] || "Lobby"; }
 function playerName(id) { return state?.players.find((player) => player.id === id)?.name || "Unknown"; }
 function groupCopy(group) {
-  if (group.kind === "bet_loss") return { title: "Bet losses", detail: group.matchTitle || "Previous match" };
+  if (group.kind === "bet_loss") return { title: `Bet losses${group.sport ? ` • ${group.sport[0].toUpperCase()}${group.sport.slice(1)}` : ""}`, detail: group.matchTitle || "Previous match" };
   if (group.kind === "assignment") return { title: `Assigned by ${group.sourceName || "another player"}`, detail: group.matchTitle || "Opponent assignment" };
   if (group.kind === "buyback") return { title: "Buy-back shot", detail: "Serve to release 5 wallet seconds" };
   return { title: group.note || "Host entry", detail: "Manual bartender entry" };

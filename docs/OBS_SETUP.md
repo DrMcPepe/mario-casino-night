@@ -25,7 +25,7 @@ Use the laptop or PC monitor for Dolphin controls and `/admin`. Use OBS Fullscre
 4. Set width and height to 1920 by 1080.
 5. Use a transparent browser-source background.
 
-The overlay uses solid, Wii-inspired cards in the upper-right and lower-right corners. It shows the sportsbook while betting is open, then automatically collapses to a small live-match badge during gameplay. The lower card rotates every eight seconds through the top five unpaid tabs, Wii Sports match leaders, and wallet holders.
+The overlay uses solid, Wii-inspired cards in the upper-right and lower-right corners. The upper card keeps the active markets and odds visible before and during gameplay, switching to a compact layout after betting locks. Match, status, pot, odds, and leaderboard changes animate automatically. The lower card rotates every eight seconds through the top five unpaid tabs, Wii Sports match leaders, and wallet holders.
 
 Use `side=left` instead when a game's HUD conflicts with the right edge:
 
