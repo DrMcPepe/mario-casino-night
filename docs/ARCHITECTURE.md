@@ -26,6 +26,8 @@ Buy-backs create a pending one-shot entry. The 5-second base credit is awarded o
 
 Raw bar entries remain immutable for audit purposes. Snapshots additionally group pending entries by player, source, and match so clients can show one readable obligation while sending all underlying entry IDs when the host serves it.
 
+TV snapshots also aggregate each current market by selection, exposing total stake seconds and unique bettor counts without exposing bettor identities. These totals remain available after settlement so both TV modes can show the winning selection and final handle.
+
 ## Statistics
 
 Betting records count settled winning and losing markets. Bet net is actual credited profit minus lost stake seconds, so wallet-cap clipping is reflected correctly.

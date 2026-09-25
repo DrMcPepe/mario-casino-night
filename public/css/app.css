@@ -165,9 +165,22 @@ th { color: var(--muted); text-transform: uppercase; letter-spacing: .06em; font
 .tv-match { display: flex; flex-direction: column; justify-content: space-between; }
 .tv-title { font-size: clamp(2.4rem, 6vw, 7rem); line-height: .9; max-width: 17ch; text-wrap: balance; }
 .odds-board { display: grid; gap: 8px; }
-.odds-line { display: flex; justify-content: space-between; gap: 18px; padding: 10px 0; border-bottom: 1px solid var(--line); }
-.odds-line b { color: var(--cyan); font-size: 1.08em; }
-.odds-line span, .ticker span { min-width: 0; overflow-wrap: anywhere; }
+.odds-line { display: block; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.market-line-head { display: flex; justify-content: space-between; align-items: center; gap: 14px; margin-bottom: 7px; }
+.market-line-head > span { flex: 0 0 auto; color: var(--muted); font-size: .68rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; }
+.market-line-head em { margin-left: 5px; padding: 2px 5px; color: #fff; background: var(--muted); border-radius: 999px; font-size: .58rem; font-style: normal; }
+.market-selections { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+.tv-selection { min-width: 0; padding: 8px 9px; background: #fff; border: 1px solid #d7e7eb; border-radius: 11px; transition: opacity .25s, transform .25s, border-color .25s; }
+.tv-selection-name { display: flex; justify-content: space-between; align-items: start; gap: 7px; min-width: 0; }
+.tv-selection-name > span { min-width: 0; overflow-wrap: anywhere; font-weight: 900; }
+.tv-selection-name em { flex: 0 0 auto; padding: 3px 6px; color: #fff; background: var(--green); border-radius: 999px; font-size: .55rem; font-style: normal; font-weight: 900; letter-spacing: .06em; }
+.tv-selection-data { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-top: 5px; }
+.tv-selection-data b { color: var(--cyan); font-size: 1.08em; }
+.tv-selection-data span { min-width: 0; color: var(--muted); font-size: .67rem; overflow-wrap: anywhere; text-align: right; }
+.tv-selection.winner { background: linear-gradient(145deg, rgba(101,201,121,.22), #fff); border: 2px solid var(--green); box-shadow: 0 4px 14px rgba(64,157,83,.2); }
+.tv-selection.loser { opacity: .58; }
+.market-void .tv-selection { opacity: .55; }
+.ticker span { min-width: 0; overflow-wrap: anywhere; }
 .qr { width: 140px; height: 140px; background: var(--paper); padding: 6px; border-radius: 9px; }
 .tv-tab-total { margin-bottom: 12px; color: var(--red); font-size: 1.4rem; font-weight: 900; font-variant-numeric: tabular-nums; }
 .ticker { display: flex; align-items: center; gap: 18px; overflow: hidden; white-space: nowrap; border-top: 1px solid var(--line); padding-top: 16px; }
@@ -210,7 +223,14 @@ body.overlay .tv-match {
 }
 body.overlay .tv-title { max-width: none; font-size: clamp(1.25rem, 2.2vw, 2rem); line-height: 1; text-shadow: none; }
 body.overlay .tv-side, body.overlay .qr-wrap { display: none; }
-body.overlay .odds-line { align-items: end; flex-direction: column; gap: 3px; padding: 8px 0; text-align: right; text-shadow: none; }
+body.overlay .odds-line { padding: 7px 0; text-align: left; text-shadow: none; }
+body.overlay .market-line-head { margin-bottom: 5px; }
+body.overlay .market-line-head > span { font-size: .56rem; }
+body.overlay .tv-selection { padding: 6px 7px; border-radius: 8px; }
+body.overlay .tv-selection-name { font-size: .72rem; }
+body.overlay .tv-selection-name em { padding: 2px 4px; font-size: .48rem; }
+body.overlay .tv-selection-data { margin-top: 3px; }
+body.overlay .tv-selection-data span { font-size: .57rem; }
 body.overlay .ticker {
   position: fixed;
   z-index: 4;
@@ -237,8 +257,9 @@ body.overlay.overlay-live .tv-title { max-width: 320px; font-size: 1.1rem; }
 body.overlay.overlay-live #tv-sport { display: none; }
 body.overlay.overlay-live .countdown { display: none; }
 body.overlay.overlay-live .odds-board { margin-top: 8px; gap: 0; }
-body.overlay.overlay-live .odds-line { flex-direction: row; align-items: center; gap: 8px; padding: 5px 0; font-size: .68rem; text-align: left; }
-body.overlay.overlay-live .odds-line span { margin-left: auto; text-align: right; }
+body.overlay.overlay-live .odds-line { padding: 5px 0; font-size: .68rem; }
+body.overlay.overlay-live .market-line-head { margin-bottom: 4px; }
+body.overlay.overlay-live .tv-selection { padding: 4px 6px; }
 body.overlay.overlay-idle .tv-main { display: none; }
 body.overlay.overlay-left .tv-top, body.overlay.overlay-left .tv-main { right: auto; left: 24px; }
 body.overlay.overlay-left .ticker { right: auto; left: 24px; align-items: flex-start; }
@@ -247,12 +268,14 @@ body.overlay.overlay-left .odds-line, body.overlay.overlay-left .countdown, body
 body.overlay.overlay-left .ticker span { border-right: 2px solid #fff; border-left: 4px solid var(--cyan); }
 @keyframes pulse { 50% { filter: brightness(1.3); } }
 @keyframes board-in { from { opacity: 0; transform: translateX(8px); } }
-@keyframes tv-update { 0% { opacity: .35; transform: translateY(-8px) scale(.985); } 55% { filter: drop-shadow(0 0 12px rgba(46,175,202,.45)); } 100% { opacity: 1; transform: none; } }
-@keyframes odds-update { from { opacity: 0; transform: translateX(14px); } }
+@keyframes tv-update { 0% { opacity: .25; transform: translateY(-12px) scale(.97); } 55% { filter: drop-shadow(0 0 16px rgba(46,175,202,.65)); } 100% { opacity: 1; transform: none; } }
+@keyframes odds-update { 0% { opacity: .3; transform: translateX(22px) scale(.97); background: rgba(46,175,202,.18); } 100% { opacity: 1; transform: none; background: transparent; } }
+@keyframes winner-update { 0% { opacity: .2; transform: scale(.75) rotate(-2deg); } 45% { transform: scale(1.08) rotate(1deg); box-shadow: 0 0 28px rgba(101,201,121,.75); } 100% { opacity: 1; transform: none; } }
 .tv-updated { animation: tv-update .55s cubic-bezier(.2,.85,.25,1) both; }
-.odds-updated { animation: odds-update .48s cubic-bezier(.2,.85,.25,1) both; animation-delay: var(--odds-delay); }
+.odds-updated { animation: odds-update .68s cubic-bezier(.2,.85,.25,1) both; animation-delay: var(--odds-delay); }
+.result-updated { animation: winner-update .9s cubic-bezier(.2,.85,.25,1) both; }
 @media (prefers-reduced-motion: reduce) {
-  .status.open, .tv-updated, .odds-updated, .leaderboard-row { animation: none; }
+  .status.open, .tv-updated, .odds-updated, .result-updated, .leaderboard-row { animation: none; }
 }
 
 @media (max-width: 760px) {

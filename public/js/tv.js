@@ -22,11 +22,19 @@ fetch("/api/config").then((response) => response.json()).then((data) => { $("#jo
 function statusText(status) { return ({ draft: "Coming up", betting_open: "Bets open", betting_locked: "Bets closed", live: "Live", resolved: "Final", void: "Void" })[status] || "Lobby"; }
 
 function marketSignature(snapshot) {
-  return JSON.stringify(snapshot?.currentMatch?.markets.map((market) => ({
-    id: market.id,
-    result: market.winningSelectionId,
-    selections: market.selections.map((selection) => [selection.id, selection.odds.label])
-  })) || []);
+  return JSON.stringify({
+    markets: snapshot?.currentMatch?.markets.map((market) => ({
+      id: market.id,
+      status: market.status,
+      result: market.winningSelectionId,
+      selections: market.selections.map((selection) => [selection.id, selection.odds.label])
+    })) || [],
+    betting: snapshot?.marketBetting || []
+  });
+}
+
+function resultSignature(snapshot) {
+  return JSON.stringify(snapshot?.currentMatch?.markets.map((market) => [market.id, market.status, market.winningSelectionId]) || []);
 }
 
 function animateElement(selector) {
@@ -44,17 +52,27 @@ function render(previous = null) {
   const matchChanged = previous?.currentMatch?.id !== match?.id;
   const statusChanged = previous?.currentMatch?.status !== match?.status;
   const oddsChanged = marketSignature(previous) !== marketSignature(state);
+  const resultChanged = resultSignature(previous) !== resultSignature(state);
   const potChanged = previous?.totalPot !== state.totalPot;
   if (overlay) {
-    document.body.classList.toggle("overlay-live", ["betting_locked", "live"].includes(match?.status));
-    document.body.classList.toggle("overlay-idle", !match || ["resolved", "void"].includes(match.status));
+    document.body.classList.toggle("overlay-live", ["betting_locked", "live", "resolved"].includes(match?.status));
+    document.body.classList.toggle("overlay-idle", !match || match.status === "void");
   }
   $("#tv-title").textContent = match?.title || (state.players.length ? "Next match loading" : "Scan. Join. Bet.");
   $("#tv-sport").textContent = match ? match.sport : `${state.players.length}/13 drivers checked in`;
   $("#tv-status").textContent = statusText(match?.status);
   $("#tv-status").className = `status ${match?.status === "betting_open" ? "open" : match?.status === "live" ? "live" : ""}`;
   $("#tv-pot").textContent = `Pot ${state.totalPot}s`;
-  $("#tv-markets").innerHTML = match ? match.markets.map((market, index) => `<div class="odds-line${oddsChanged ? " odds-updated" : ""}" style="--odds-delay:${index * 70}ms"><strong>${esc(market.label)}</strong><span>${market.selections.map((selection) => `${esc(selection.label)} <b>${selection.odds.label}</b>`).join(" &nbsp; ")}</span></div>`).join("") : "";
+  $("#tv-markets").innerHTML = match ? match.markets.map((market, index) => {
+    const betting = state.marketBetting.find((item) => item.marketId === market.id) || { totalStakeSeconds: 0, selections: [] };
+    const marketVoid = market.status === "void";
+    return `<article class="odds-line${oddsChanged ? " odds-updated" : ""}${marketVoid ? " market-void" : ""}" style="--odds-delay:${index * 70}ms"><div class="market-line-head"><strong>${esc(market.label)}</strong><span>${betting.totalStakeSeconds}s wagered${marketVoid ? ` <em>VOID</em>` : ""}</span></div><div class="market-selections">${market.selections.map((selection) => {
+      const totals = betting.selections.find((item) => item.selectionId === selection.id) || { stakeSeconds: 0, bettorCount: 0 };
+      const winner = market.status === "resolved" && market.winningSelectionId === selection.id;
+      const loser = market.status === "resolved" && market.winningSelectionId !== selection.id;
+      return `<div class="tv-selection${winner ? " winner" : ""}${loser ? " loser" : ""}${winner && resultChanged ? " result-updated" : ""}"><div class="tv-selection-name"><span>${esc(selection.label)}</span>${winner ? `<em>WINNER</em>` : ""}</div><div class="tv-selection-data"><b>${esc(selection.odds.label)}</b><span>${totals.stakeSeconds}s • ${totals.bettorCount} bettor${totals.bettorCount === 1 ? "" : "s"}</span></div></div>`;
+    }).join("")}</div></article>`;
+  }).join("") : "";
 
   renderLeaderboard();
   renderCountdown();

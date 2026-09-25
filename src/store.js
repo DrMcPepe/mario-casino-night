@@ -601,7 +601,22 @@ export class EventStore extends EventEmitter {
     const statistics = this.statistics(players);
     const match = this.currentMatch();
     const currentBets = match ? this.state.bets.filter((bet) => bet.matchId === match.id) : [];
-    const totalPot = currentBets.filter((bet) => bet.status === "pending").reduce((sum, bet) => sum + bet.stakeSeconds, 0);
+    const activeBets = currentBets.filter((bet) => !["cancelled", "void"].includes(bet.status));
+    const totalPot = activeBets.reduce((sum, bet) => sum + bet.stakeSeconds, 0);
+    const marketBetting = match ? match.markets.map((market) => ({
+      marketId: market.id,
+      totalStakeSeconds: currentBets
+        .filter((bet) => bet.marketId === market.id && bet.status !== "cancelled")
+        .reduce((sum, bet) => sum + bet.stakeSeconds, 0),
+      selections: market.selections.map((selection) => {
+        const bets = currentBets.filter((bet) => bet.marketId === market.id && bet.selectionId === selection.id && bet.status !== "cancelled");
+        return {
+          selectionId: selection.id,
+          stakeSeconds: bets.reduce((sum, bet) => sum + bet.stakeSeconds, 0),
+          bettorCount: new Set(bets.map((bet) => bet.playerId)).size
+        };
+      })
+    })) : [];
     const unpaidBar = this.state.barEntries.filter((entry) => entry.status === "pending").map((entry) => ({
       ...entry,
       playerName: players.find((player) => player.id === entry.playerId)?.name || "Unknown",
@@ -643,6 +658,7 @@ export class EventStore extends EventEmitter {
       players,
       currentMatch: match ? structuredClone(match) : null,
       totalPot,
+      marketBetting,
       unpaidBar,
       barGroups,
       statistics

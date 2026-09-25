@@ -19,6 +19,7 @@ A local-first, real-time Wii Sports sportsbook and printable Beerio Kart event s
 - Host-confirmed shot buy-backs worth 5 seconds
 - One-button test-event reset that preserves player names and phone claims
 - Wii-inspired responsive interface and rotating TV top-five boards for tabs, match leaders, and wallets
+- Per-selection TV odds, wagered seconds, bettor counts, and animated winning outcomes
 - In-memory operation with an optional local JSON recovery checkpoint
 
 ## Requirements

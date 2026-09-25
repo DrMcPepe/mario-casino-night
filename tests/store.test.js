@@ -106,6 +106,24 @@ test("a player can undo all stakes in a market while betting remains open", () =
   assert.equal(store.snapshot("guest").totalPot, 0);
 });
 
+test("TV snapshot aggregates stake and unique bettors for every selection", () => {
+  const store = setup();
+  const [,, bettorOne, bettorTwo] = store.state.players;
+  const match = createOpenMatch(store);
+  const market = match.markets[0];
+  store.placeBet(bettorOne.id, { marketId: market.id, selectionId: market.selections[0].id, stakeSeconds: 2 });
+  store.placeBet(bettorOne.id, { marketId: market.id, selectionId: market.selections[0].id, stakeSeconds: 3 });
+  store.placeBet(bettorTwo.id, { marketId: market.id, selectionId: market.selections[1].id, stakeSeconds: 4 });
+  const snapshot = store.snapshot("tv");
+  const totals = snapshot.marketBetting.find((item) => item.marketId === market.id);
+  assert.equal(totals.totalStakeSeconds, 9);
+  assert.equal(totals.selections[0].stakeSeconds, 5);
+  assert.equal(totals.selections[0].bettorCount, 1);
+  assert.equal(totals.selections[1].stakeSeconds, 4);
+  assert.equal(totals.selections[1].bettorCount, 1);
+  assert.equal(snapshot.totalPot, 9);
+});
+
 test("buy-backs wait until open all-in bets can no longer be undone", () => {
   const store = setup();
   const player = store.state.players[2];
