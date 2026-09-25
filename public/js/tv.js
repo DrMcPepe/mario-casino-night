@@ -1,6 +1,11 @@
 const socket = io();
-const overlay = new URLSearchParams(location.search).get("overlay") === "1";
-if (overlay) document.body.classList.add("overlay");
+const parameters = new URLSearchParams(location.search);
+const overlay = parameters.get("overlay") === "1";
+if (overlay) {
+  document.documentElement.classList.add("overlay-root");
+  document.body.classList.add("overlay");
+  if (parameters.get("side") === "left") document.body.classList.add("overlay-left");
+}
 let state = null;
 const $ = (selector) => document.querySelector(selector);
 const esc = (value) => String(value ?? "").replace(/[&<>'"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character]);
@@ -14,6 +19,10 @@ function statusText(status) { return ({ draft: "Coming up", betting_open: "Bets 
 function render() {
   if (!state) return;
   const match = state.currentMatch;
+  if (overlay) {
+    document.body.classList.toggle("overlay-live", ["betting_locked", "live"].includes(match?.status));
+    document.body.classList.toggle("overlay-idle", !match || ["resolved", "void"].includes(match.status));
+  }
   $("#tv-title").textContent = match?.title || (state.players.length ? "Next match loading" : "Scan. Join. Bet.");
   $("#tv-sport").textContent = match ? match.sport : `${state.players.length}/13 drivers checked in`;
   $("#tv-status").textContent = statusText(match?.status);

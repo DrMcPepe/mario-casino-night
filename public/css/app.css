@@ -103,15 +103,71 @@ th { color: var(--muted); text-transform: uppercase; letter-spacing: .06em; font
 .qr { width: 140px; height: 140px; background: var(--paper); padding: 6px; border-radius: 9px; }
 .ticker { display: flex; align-items: center; gap: 18px; overflow: hidden; white-space: nowrap; border-top: 1px solid var(--line); padding-top: 16px; }
 .ticker strong { color: var(--red); }
-body.overlay { background: transparent; }
-body.overlay .tv-shell { padding: 20px; display: block; }
-body.overlay .tv-top, body.overlay .tv-main, body.overlay .ticker { background: rgba(12,13,11,.88); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,.15); }
-body.overlay .tv-top { border-radius: 12px; padding: 10px 15px; }
-body.overlay .tv-main { display: grid; width: 420px; margin: 12px 0 0 auto; border-radius: 12px; padding: 14px; }
-body.overlay .tv-title { font-size: 2rem; }
-body.overlay .tv-side, body.overlay .qr-wrap, body.overlay .tv-markets-detail { display: none; }
-body.overlay .ticker { position: fixed; left: 20px; right: 20px; bottom: 20px; border-radius: 10px; padding: 10px 14px; }
-body.overlay .countdown { font-size: 3rem; }
+html.overlay-root, body.overlay { background: transparent; }
+body.overlay .tv-shell { padding: 0; display: block; pointer-events: none; }
+body.overlay .tv-top {
+  position: fixed;
+  z-index: 3;
+  top: 24px;
+  right: 24px;
+  width: 360px;
+  padding: 10px 14px;
+  background: rgba(12,13,11,.76);
+  border: 1px solid rgba(255,255,255,.18);
+  border-radius: 10px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 10px 34px rgba(0,0,0,.28);
+}
+body.overlay .tv-top .brand { font-size: .78rem; }
+body.overlay .tv-top .flag { width: 22px; height: 22px; background-size: 11px 11px; }
+body.overlay .tv-main {
+  position: fixed;
+  z-index: 2;
+  top: 88px;
+  right: 24px;
+  display: block;
+  width: 360px;
+}
+body.overlay .tv-match {
+  min-height: 0;
+  padding: 14px;
+  background: linear-gradient(90deg, rgba(12,13,11,.3), rgba(12,13,11,.84));
+  border-color: rgba(255,255,255,.13);
+  backdrop-filter: blur(5px);
+  box-shadow: none;
+}
+body.overlay .tv-title { max-width: none; font-size: 2rem; line-height: .95; text-shadow: 0 2px 12px #000; }
+body.overlay .tv-side, body.overlay .qr-wrap { display: none; }
+body.overlay .odds-line { align-items: end; flex-direction: column; gap: 3px; padding: 8px 0; text-align: right; text-shadow: 0 2px 8px #000; }
+body.overlay .ticker {
+  position: fixed;
+  z-index: 4;
+  right: 24px;
+  bottom: 24px;
+  width: 360px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 7px;
+  padding: 0;
+  overflow: visible;
+  border: 0;
+  white-space: normal;
+}
+body.overlay .ticker strong:first-child { padding: 4px 8px; background: var(--red); color: #fff; border-radius: 5px; font-size: .68rem; letter-spacing: .1em; }
+body.overlay .ticker span { max-width: 100%; padding: 7px 10px; background: rgba(12,13,11,.78); border-left: 3px solid var(--red); border-radius: 6px; text-align: right; text-shadow: 0 2px 8px #000; backdrop-filter: blur(5px); }
+body.overlay .countdown { font-size: 3rem; margin: 7px 0; text-align: right; text-shadow: 0 3px 18px #000; }
+body.overlay.overlay-live .tv-main { top: 88px; }
+body.overlay.overlay-live .tv-match { margin-left: auto; width: fit-content; max-width: 360px; padding: 9px 12px; }
+body.overlay.overlay-live .tv-match > div:last-child { display: none; }
+body.overlay.overlay-live .tv-title { font-size: 1.3rem; }
+body.overlay.overlay-live #tv-sport { display: none; }
+body.overlay.overlay-idle .tv-main { display: none; }
+body.overlay.overlay-left .tv-top, body.overlay.overlay-left .tv-main { right: auto; left: 24px; }
+body.overlay.overlay-left .ticker { right: auto; left: 24px; align-items: flex-start; }
+body.overlay.overlay-left .tv-match { background: linear-gradient(90deg, rgba(12,13,11,.84), rgba(12,13,11,.3)); }
+body.overlay.overlay-left .odds-line, body.overlay.overlay-left .countdown, body.overlay.overlay-left .ticker span { text-align: left; }
+body.overlay.overlay-left .ticker span { border-left: 0; border-right: 3px solid var(--red); }
 @keyframes pulse { 50% { filter: brightness(1.3); } }
 
 @media (max-width: 760px) {
@@ -122,4 +178,6 @@ body.overlay .countdown { font-size: 3rem; }
   .tv-shell { padding: 18px; }
   .tv-main { grid-template-columns: 1fr; }
   .qr { width: 100px; height: 100px; }
+  body.overlay .tv-top, body.overlay .tv-main, body.overlay .ticker { width: min(360px, calc(100vw - 24px)); right: 12px; }
+  body.overlay.overlay-left .tv-top, body.overlay.overlay-left .tv-main, body.overlay.overlay-left .ticker { right: auto; left: 12px; }
 }

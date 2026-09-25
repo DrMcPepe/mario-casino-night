@@ -72,7 +72,7 @@ Use three scenes:
 |---|---|
 | Beerio Game | Dolphin only |
 | Casino Dashboard | Browser source `http://localhost:5000/tv` |
-| Casino Game | Dolphin plus browser source `http://localhost:5000/tv?overlay=1` |
+| Casino Game | Dolphin plus browser source `http://localhost:5000/tv?overlay=1&side=right` |
 
 See [`docs/OBS_SETUP.md`](docs/OBS_SETUP.md) for the full setup.
 

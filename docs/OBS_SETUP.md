@@ -21,11 +21,23 @@ Use the laptop or PC monitor for Dolphin controls and `/admin`. Use OBS Fullscre
 
 1. Duplicate the Beerio Game scene.
 2. Add a Browser source above Dolphin.
-3. Set URL to `http://localhost:5000/tv?overlay=1`.
+3. Set URL to `http://localhost:5000/tv?overlay=1&side=right`.
 4. Set width and height to 1920 by 1080.
 5. Use a transparent browser-source background.
 
-The overlay occupies the upper-right edge and a lower bar, leaving the center of Wii Sports visible.
+The transparent overlay behaves like a Twitch chat rail on the selected edge. It shows the sportsbook while betting is open, then automatically collapses to a small live-match badge and stacked bar-tab messages during gameplay.
+
+Use `side=left` instead when a game's HUD conflicts with the right edge:
+
+```text
+http://localhost:5000/tv?overlay=1&side=left
+```
+
+### Two Placement Options
+
+For a true overlay, keep the browser source at 1920 by 1080 above Dolphin. Only the edge rail is drawn; the rest is transparent.
+
+For zero gameplay obstruction, make the browser source 360 by 1080 and place it at the canvas edge. Resize Dolphin to the remaining canvas width. This creates a Twitch-style dedicated sidebar rather than drawing over the game.
 
 ## Performance
 
